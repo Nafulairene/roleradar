@@ -1,75 +1,60 @@
-# React + TypeScript + Vite
+# RoleRadar
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Tracks support and solutions engineering roles across company career pages and alerts on new matches.
 
-Currently, two official plugins are available:
+> **Status:** In active development. Phase 1 (job collector and listing page) is underway. See the [roadmap](#roadmap).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Why
 
-## React Compiler
+Support and solutions engineering roles are spread across hundreds of company career pages, and general job boards miss many of them or list them late. RoleRadar watches the sources directly, normalizes every posting into one format, and flags new matches by role, region and time zone.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How it works
 
-## Expanding the ESLint configuration
+1. **Collect:** A scheduled collector reads public job-board endpoints (Greenhouse, Lever, Ashby), falling back to HTML scraping only where no endpoint exists and the site permits it.
+2. **Normalize:** Each posting is converted into one typed `Job` shape and stored in Postgres, de-duplicated by source and posting ID.
+3. **Browse:** A React dashboard lists and filters jobs.
+4. **Alert:** New matches are sent to Slack or Discord via webhooks, exactly once per posting.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, Vite |
+| Backend (planned) | Hono, TypeScript |
+| Database (planned) | PostgreSQL with Drizzle ORM |
+| Infrastructure (planned) | Docker, GitHub Actions |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Roadmap
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- [x] Project scaffold: React, TypeScript, ESLint
+- [ ] Collector for Greenhouse, Lever and Ashby job boards
+- [ ] Postgres storage with de-duplication
+- [ ] Job list page with filters (role, region, time zone)
+- [ ] Slack and Discord alerts, sent once per posting
+- [ ] Rate limiting with exponential backoff and `Retry-After` support
+- [ ] User accounts and saved searches
+- [ ] Deployment
 
+## Engineering notes
+
+Every real issue hit during development gets a short postmortem in [`incidents/`](incidents/): symptom, evidence, root cause, fix and prevention.
+
+| # | Incident |
+|---|---|
+| [001](incidents/001-npm-econnreset.md) | `ECONNRESET` while scaffolding the project |
+| [002](incidents/002-wrong-vite-template.md) | Scaffold generated without React |
+
+## Running locally
+
+Requires Node.js 22 or later.
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Then open http://localhost:5173.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Responsible collection
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+RoleRadar is designed to read public job-board APIs and respect robots.txt and site terms. It does not scrape sites that prohibit automated access.
