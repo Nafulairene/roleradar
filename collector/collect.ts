@@ -40,6 +40,9 @@ const ROLE_PHRASES = [
 // Leadership titles to skip, matched only at the start of the title
 const EXCLUDE_PREFIXES = ['director', 'senior manager', 'manager', 'head of', 'vp']
 
+// Companies to watch: their Greenhouse board tokens
+const WATCHLIST = ['gitlab', 'cloudflare', 'datadog']
+
 function isRelevant(job: Job): boolean {
   const title = job.title.toLowerCase()
 
@@ -71,12 +74,24 @@ async function fetchGreenhouseJobs(boardToken: string): Promise<Job[]> {
 }
 
 async function main() {
-  const jobs = await fetchGreenhouseJobs('gitlab')
-  const matches = jobs.filter(isRelevant)
+  const allJobs: Job[] = []
 
-  console.log(`Fetched ${jobs.length} jobs, ${matches.length} relevant roles:\n`)
+  for (const company of WATCHLIST) {
+    try {
+      const jobs = await fetchGreenhouseJobs(company)
+      allJobs.push(...jobs)
+      console.log(`✓ ${company}: ${jobs.length} jobs`)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      console.error(`✗ ${company}: skipped (${reason})`)
+    }
+  }
+
+  const matches = allJobs.filter(isRelevant)
+
+  console.log(`\nFetched ${allJobs.length} jobs from ${WATCHLIST.length} companies, ${matches.length} relevant roles:\n`)
   for (const job of matches) {
-    console.log(`- ${job.title} | ${job.location}`)
+    console.log(`- [${job.company}] ${job.title} | ${job.location}`)
     console.log(`  ${job.url}`)
   }
 }
