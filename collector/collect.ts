@@ -26,7 +26,28 @@ type Job = {
   updatedAt: string
 }
 
-const KEYWORDS = ['support', 'solutions', 'customer success', 'technical account']
+// Roles we want, matched as whole phrases rather than single words
+const ROLE_PHRASES = [
+  'support engineer',
+  'solutions engineer',
+  'solutions architect',
+  'solution architect',
+  'customer success engineer',
+  'technical account manager',
+  'implementation engineer',
+]
+
+// Leadership titles to skip, matched only at the start of the title
+const EXCLUDE_PREFIXES = ['director', 'senior manager', 'manager', 'head of', 'vp']
+
+function isRelevant(job: Job): boolean {
+  const title = job.title.toLowerCase()
+
+  const isLeadershipRole = EXCLUDE_PREFIXES.some((prefix) => title.startsWith(prefix))
+  if (isLeadershipRole) return false
+
+  return ROLE_PHRASES.some((phrase) => title.includes(phrase))
+}
 
 async function fetchGreenhouseJobs(boardToken: string): Promise<Job[]> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${boardToken}/jobs`
@@ -49,16 +70,11 @@ async function fetchGreenhouseJobs(boardToken: string): Promise<Job[]> {
   }))
 }
 
-function matchesKeywords(job: Job): boolean {
-  const title = job.title.toLowerCase()
-  return KEYWORDS.some((keyword) => title.includes(keyword))
-}
-
 async function main() {
   const jobs = await fetchGreenhouseJobs('gitlab')
-  const matches = jobs.filter(matchesKeywords)
+  const matches = jobs.filter(isRelevant)
 
-  console.log(`Fetched ${jobs.length} jobs, ${matches.length} match your keywords:\n`)
+  console.log(`Fetched ${jobs.length} jobs, ${matches.length} relevant roles:\n`)
   for (const job of matches) {
     console.log(`- ${job.title} | ${job.location}`)
     console.log(`  ${job.url}`)
