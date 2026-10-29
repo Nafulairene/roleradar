@@ -1,3 +1,6 @@
+import { pool, setupDatabase, saveJobs } from './db'
+import type { Job } from './types'
+
 // Fetches open roles from a company's Greenhouse job board
 // and prints the ones that match our keywords.
 
@@ -15,16 +18,6 @@ type GreenhouseResponse = {
   jobs: GreenhouseJob[]
 }
 
-// 3. Our own clean shape for a job, the same for every source
-type Job = {
-  source: 'greenhouse'
-  company: string
-  externalId: string
-  title: string
-  location: string
-  url: string
-  updatedAt: string
-}
 
 // Roles we want, matched as whole phrases rather than single words
 const ROLE_PHRASES = [
@@ -74,6 +67,8 @@ async function fetchGreenhouseJobs(boardToken: string): Promise<Job[]> {
 }
 
 async function main() {
+  await setupDatabase()
+
   const allJobs: Job[] = []
 
   for (const company of WATCHLIST) {
@@ -88,14 +83,14 @@ async function main() {
   }
 
   const matches = allJobs.filter(isRelevant)
+  const newCount = await saveJobs(matches)
 
-  console.log(`\nFetched ${allJobs.length} jobs from ${WATCHLIST.length} companies, ${matches.length} relevant roles:\n`)
-  for (const job of matches) {
-    console.log(`- [${job.company}] ${job.title} | ${job.location}`)
-    console.log(`  ${job.url}`)
-  }
+  console.log(`\nFetched ${allJobs.length} jobs from ${WATCHLIST.length} companies.`)
+  console.log(`${matches.length} relevant roles, ${newCount} new since last run.`)
 }
 
-main().catch((error) => {
-  console.error('Collector failed:', error)
-})
+main()
+  .catch((error) => {
+    console.error('Collector failed:', error)
+  })
+  .finally(() => pool.end())
